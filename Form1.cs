@@ -49,6 +49,8 @@ namespace asgn5v1
 		private System.Windows.Forms.ToolBarButton resetbtn;
 		private System.Windows.Forms.ToolBarButton exitbtn;
 		int[,] lines;
+        MMatrix mMatrix;
+        MVectorArray vArray;
 
 		public Transformer()
 		{
@@ -77,7 +79,7 @@ namespace asgn5v1
 				new EventHandler(MenuAboutOnClick));
 			Menu = new MainMenu(new MenuItem[] {miFile, miAbout});
 
-			
+            this.mMatrix = new MMatrix(4, 4);
 		}
 
 		/// <summary>
@@ -367,6 +369,9 @@ namespace asgn5v1
 		{
 			//MessageBox.Show("New Data item clicked.");
 			gooddata = GetNewData();
+            //create VectorArray for all points
+            //this.vArray = new MVectorArray(this.vertices.GetLength(0));
+            this.mMatrix.SetIdentity();
 			RestoreInitialImage();			
 		}
 
@@ -383,7 +388,24 @@ namespace asgn5v1
 
 		void RestoreInitialImage()
 		{
-			Invalidate();
+            //fufill requirement:
+            //(i) initially displays your block character on screen/window,
+            //"top-upwards" with center at the center of the screen, and vertical height 
+            //equal to half the vertical height of the screen/window.
+
+            //
+
+            //translate to center
+            Screen screen = Screen.FromControl(this);
+            int screenWidth = screen.Bounds.Width;
+            int screenHeight = screen.Bounds.Height;
+            this.Translate(screenWidth / 2, screenHeight / 2, 0);
+            this.Scale(screenHeight / 2, screenHeight / 2, 1);
+            //MMatrix translation = new MMatrix(4, 4);
+            //translation.Set(3, 0, screenWidth);
+            //translation.Set(3, 1, screenHeight);
+
+            Invalidate();
 		} // end of RestoreInitialImage
 
 		bool GetNewData()
@@ -494,7 +516,8 @@ namespace asgn5v1
 			}
 			if (e.Button == transrightbtn) 
 			{
-				Refresh();
+                Translate(10, 10, 10);
+                Refresh();
 			}
 			if (e.Button == transupbtn)
 			{
@@ -562,8 +585,203 @@ namespace asgn5v1
 
 		}
 
-		
-	}
+        //update the main transformation matrix by a given matrix object
+        void updateTrans(MMatrix m)
+        {
+            for(int i = 0; i < m.Rows(); i++)
+            {
+                for(int j = 0; j < m.Cols(); j++)
+                {
+                    this.ctrans[i, j] = m.Get(i, j);
+                }
+            }
+        }
 
-	
+        //reset the current transformation matrxi to identity
+        void resetCurrentTransformMatrix()
+        {
+            this.setIdentity(this.ctrans, 4, 4);
+            this.mMatrix.Clear();
+        }
+
+        //accumulatively add translation to the ctrans
+        void Translate(double x, double y, double z)
+        {
+            MMatrix n = this.mMatrix.Clone();
+            this.mMatrix.SetIdentity();
+            this.mMatrix.Set(3, 0, x);
+            this.mMatrix.Set(3, 1, y);
+            this.mMatrix.Set(3, 2, z);
+            n = n.Multiply(this.mMatrix);
+            this.updateTrans(n);//update ctrans
+        }
+
+        void Scale(double x, double y, double z)
+        {
+            MMatrix n = this.mMatrix.Clone();
+            this.mMatrix.SetIdentity();
+            this.mMatrix.Set(0, 0, this.mMatrix.Get(0, 0) * x);
+            this.mMatrix.Set(3, 1, this.mMatrix.Get(1, 1) * y);
+            this.mMatrix.Set(3, 2, this.mMatrix.Get(2, 2) * z);
+            n = n.Multiply(this.mMatrix);
+            this.updateTrans(n);//update ctrans
+        }
+
+        void Reflect(bool x, bool y, bool z)
+        {
+
+        }
+
+        void Rotate(int axis, double angle_rad)
+        {
+
+        }
+
+        void Shear(int axis, double factor)
+        {
+
+        }
+    }
+
+	public class MMatrix
+    {
+        protected double[,] data = null;
+        protected int cols = 0, rows = 0;
+        //constructor
+        public MMatrix(int cols, int rows)
+        {
+            this.cols = cols;
+            this.rows = rows;
+            this.data = new double[rows, cols];
+            for(int i = 0; i < rows; i++)
+            {
+                for(int j = 0; j < cols; j++)
+                {
+                    this.data[i,j] = 0;
+                }
+            }
+        }
+
+        public int Cols()
+        {
+            return this.cols;
+        }
+
+        public int Rows()
+        {
+            return this.rows;
+        }
+
+
+        //multiplication
+        public MMatrix Multiply(MMatrix m)
+        {
+            MMatrix n = new MMatrix(this.Cols(), this.Rows());
+            for(int row = 0; row < this.Rows(); row++)
+            {
+                for(int col = 0; col < this.Cols(); col++)
+                {
+                    double value = 0.0d;
+                    for (int i = 0; i < m.Rows(); i++)
+                    {
+                        value += this.Get(row, i) * m.Get(i, col);
+                    }
+                    n.Set(row, col, value);
+                }
+            }
+            return n;
+        }
+
+        public MMatrix Set(int row, int col, double value)
+        {
+            this.data[row, col] = value;
+            return this;
+        }
+
+        public double Get(int row, int col)
+        {
+            return this.data[row, col];
+        }
+
+        public MMatrix Clone()
+        {
+            MMatrix n = new MMatrix(this.cols, this.rows);
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    n.Set(i, j, this.Get(i, j));
+                }
+            }
+            return n;
+        }
+
+        public void Clear()
+        {
+            for(int i = 0; i < this.rows; i++)
+            {
+                for(int j = 0; j < this.cols; j++)
+                {
+                    this.data[i, j] = 0.0d;
+                }
+            }
+        }
+
+        public void SetIdentity()
+        {
+            for (int i = 0; i < this.rows; i++)
+            {
+                for (int j = 0; j < this.cols; j++)
+                {
+                    this.data[i, j] = 0.0d;
+                }
+                this.data[i, i] = 1.0d;
+            }
+        }
+    }
+
+    public class MVector : MMatrix
+    {
+        
+        public MVector() : base (4, 1)
+        {
+
+        }
+
+        public MVector(double x, double y, double z, double h) : base(4, 1)
+        {
+            this.Set(0, 0, x).Set(0, 1, y).Set(0, 2, z).Set(0, 3, h);
+        }
+
+        public MVector(double x, double y, double z) : this(x, y, z, 1)
+        {
+            
+        }
+
+        public new MVector Clone()
+        {
+            return new MVector(this.Get(0, 0), this.Get(0, 1), this.Get(0, 2), this.Get(0, 3));
+        }
+
+    }
+
+    public class MVectorArray : MMatrix
+    {
+        public MVectorArray(int length) : base(4, length)
+        {
+
+        }
+
+        public MVectorArray read(double[,] input)
+        {
+            for(int i = 0; i < input.GetLength(0); i++)
+            {
+                for(int j = 0; j < input.GetLength(1); j++)
+                {
+                    this.Set(i, j, input[i, j]);
+                }
+            }
+            return this;
+        }
+    }
 }
