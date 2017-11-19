@@ -49,6 +49,8 @@ namespace asgn5v1
 		private System.Windows.Forms.ToolBarButton resetbtn;
 		private System.Windows.Forms.ToolBarButton exitbtn;
 		int[,] lines;
+        double shapeWidth = 0.0d;
+        double shapeHeight = 0.0d;
         MMatrix mMatrix;
         MVectorArray vArray;
 
@@ -395,15 +397,20 @@ namespace asgn5v1
 
             //
 
-            //translate to center
+            
             Screen screen = Screen.FromControl(this);
             int screenWidth = screen.Bounds.Width;
             int screenHeight = screen.Bounds.Height;
-            this.Translate(screenWidth / 2, screenHeight / 2, 0);
-            this.Scale(screenHeight / 2, screenHeight / 2, 1);
-            //MMatrix translation = new MMatrix(4, 4);
-            //translation.Set(3, 0, screenWidth);
-            //translation.Set(3, 1, screenHeight);
+            
+            //scale to as large as half width of screen
+            Rectangle rect = this.GetShapeRect();
+            double scale_ratio_x = screenWidth / (2 * rect.Width);
+            double scale_ratio_y = screenHeight / (2 * rect.Height);
+            this.Scale(scale_ratio_x, scale_ratio_y, 1);
+            //reflect on y axis to convert from screen coord system to general coord system
+            this.Reflect(false, true, false);
+            //translate to center
+            this.Translate(screenWidth / 2 - screenWidth / 4, screenHeight / 2 + screenHeight / 4, 0);
 
             Invalidate();
 		} // end of RestoreInitialImage
@@ -512,21 +519,24 @@ namespace asgn5v1
 		{
 			if (e.Button == transleftbtn)
 			{
-				Refresh();
+                Translate(-10, 0, 0);
+                Refresh();
 			}
 			if (e.Button == transrightbtn) 
 			{
-                Translate(10, 10, 10);
+                Translate(10, 0, 0);
                 Refresh();
 			}
 			if (e.Button == transupbtn)
 			{
-				Refresh();
+                Translate(0, -10, 0);
+                Refresh();
 			}
 			
 			if(e.Button == transdownbtn)
 			{
-				Refresh();
+                Translate(0, 10, 0);
+                Refresh();
 			}
 			if (e.Button == scaleupbtn) 
 			{
@@ -585,6 +595,33 @@ namespace asgn5v1
 
 		}
 
+        //get shape rect
+        Rectangle GetShapeRect()
+        {
+            double left = this.vertices[0, 0], right = this.vertices[0, 0];
+            double top = this.vertices[0, 1], bottom = this.vertices[0, 1];
+            for(int i = 0; i < this.vertices.GetLength(0); i++)
+            {
+                if (this.vertices[i, 0] < left)
+                {
+                    left = this.vertices[i, 0];
+                }
+                if(this.vertices[i, 0] > right)
+                {
+                    right = this.vertices[i, 0];
+                }
+                if (this.vertices[i, 1] < top)
+                {
+                    top = this.vertices[i, 1];
+                }
+                if (this.vertices[i, 1] > bottom)
+                {
+                    bottom = this.vertices[i, 1];
+                }
+            }
+            return new Rectangle(Convert.ToInt32(left), Convert.ToInt32(top), Convert.ToInt32(right - left), Convert.ToInt32(bottom - top));
+        }
+
         //update the main transformation matrix by a given matrix object
         void updateTrans(MMatrix m)
         {
@@ -607,29 +644,50 @@ namespace asgn5v1
         //accumulatively add translation to the ctrans
         void Translate(double x, double y, double z)
         {
-            MMatrix n = this.mMatrix.Clone();
-            this.mMatrix.SetIdentity();
-            this.mMatrix.Set(3, 0, x);
-            this.mMatrix.Set(3, 1, y);
-            this.mMatrix.Set(3, 2, z);
-            n = n.Multiply(this.mMatrix);
-            this.updateTrans(n);//update ctrans
+            //create a new transformation matrix
+            MMatrix n = new MMatrix(4, 4);
+            n.SetIdentity();
+            n.Set(3, 0, x);
+            n.Set(3, 1, y);
+            n.Set(3, 2, z);
+            //multiply to add a translation to the current transformation matrix
+            this.mMatrix = this.mMatrix.Multiply(n);
+            this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
         }
 
         void Scale(double x, double y, double z)
         {
-            MMatrix n = this.mMatrix.Clone();
-            this.mMatrix.SetIdentity();
-            this.mMatrix.Set(0, 0, this.mMatrix.Get(0, 0) * x);
-            this.mMatrix.Set(3, 1, this.mMatrix.Get(1, 1) * y);
-            this.mMatrix.Set(3, 2, this.mMatrix.Get(2, 2) * z);
-            n = n.Multiply(this.mMatrix);
-            this.updateTrans(n);//update ctrans
+            //create a new transformation matrix
+            MMatrix n = new MMatrix(4, 4);
+            n.SetIdentity();
+            n.Set(0, 0, x);
+            n.Set(1, 1, y);
+            n.Set(2, 2, z);
+            //multiply to add a scaling to the current transformation matrix
+            this.mMatrix = this.mMatrix.Multiply(n);
+            this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
         }
 
         void Reflect(bool x, bool y, bool z)
         {
-
+            //create a new transformation matrix
+            MMatrix n = new MMatrix(4, 4);
+            n.SetIdentity();
+            if (x)
+            {
+                n.Set(0, 0, -1);
+            }
+            if (y)
+            {
+                n.Set(1, 1, -1);
+            }
+            if (z)
+            {
+                n.Set(2, 2, -1);
+            }
+            //multiply to add a reflection to the current transformation matrix
+            this.mMatrix = this.mMatrix.Multiply(n);
+            this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
         }
 
         void Rotate(int axis, double angle_rad)
