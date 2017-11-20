@@ -53,4 +53,5 @@
          - y: vertical position, goese from top to bottom
          - width: the width of the currently drawing shape
          - height: the height of the currently drawing shape
-      
+   - RestoreInitialImage()
+     - the project function where is bascially your entry point. A good place to add a breakpoint to peek into when you debug this program.
