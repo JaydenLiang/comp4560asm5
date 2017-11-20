@@ -46,4 +46,11 @@
    - invalidate()
      - this built-in function is used to redraw
      - I think when we do a 'animation' - continuous tranformation, we need to call the invalidate()
+   - GetShapeRect()
+     - I create this function to get the area (rectangle) of the current shape
+       - it returns a Rect object which has properties defined as:
+         - x: horizontal position, goes from left to right
+         - y: vertical position, goese from top to bottom
+         - width: the width of the currently drawing shape
+         - height: the height of the currently drawing shape
       
