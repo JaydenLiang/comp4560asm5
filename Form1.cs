@@ -401,7 +401,11 @@ namespace asgn5v1
             Screen screen = Screen.FromControl(this);
             int screenWidth = screen.Bounds.Width;
             int screenHeight = screen.Bounds.Height;
-            
+
+            //reset the ctran and mMatrix
+            this.setIdentity(ctrans, 4, 4);  //initialize transformation matrix to identity
+            this.mMatrix.SetIdentity();
+
             //scale to as large as half width of screen
             Rectangle rect = this.GetShapeRect();
             double scale_ratio_x = screenWidth / (2 * rect.Width);
