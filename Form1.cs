@@ -53,6 +53,9 @@ namespace asgn5v1
         double shapeHeight = 0.0d;
         MMatrix mMatrix;
         MVectorArray vArray;
+        double screenWidth;
+        double screenHeight;
+        double depth;
 
 		public Transformer()
 		{
@@ -371,7 +374,6 @@ namespace asgn5v1
 		{
 			//MessageBox.Show("New Data item clicked.");
 			gooddata = GetNewData();
-            //create VectorArray for all points
             //this.vArray = new MVectorArray(this.vertices.GetLength(0));
             this.mMatrix.SetIdentity();
 			RestoreInitialImage();			
@@ -399,22 +401,24 @@ namespace asgn5v1
 
             
             Screen screen = Screen.FromControl(this);
-            int screenWidth = screen.Bounds.Width;
-            int screenHeight = screen.Bounds.Height;
+            this.screenWidth = screen.Bounds.Width;
+            this.screenHeight = screen.Bounds.Height;
 
             //reset the ctran and mMatrix
             this.setIdentity(ctrans, 4, 4);  //initialize transformation matrix to identity
             this.mMatrix.SetIdentity();
 
             //scale to as large as half width of screen
-            Rectangle rect = this.GetShapeRect();
-            double scale_ratio_x = screenWidth / (2 * rect.Width);
-            double scale_ratio_y = screenHeight / (2 * rect.Height);
-            this.Scale(scale_ratio_x, scale_ratio_y, 1);
+            Rectangle3D rect = this.GetShapeRect();//this is the original one
+
+            double scale_ratio = screenHeight / (2 * rect.Height);
+            this.Scale(scale_ratio, scale_ratio, 1);
             //reflect on y axis to convert from screen coord system to general coord system
             this.Reflect(false, true, false);
+            //scale to as large as half width of screen
+            rect = this.GetShapeRect();//this is the one after scaling
             //translate to center
-            this.Translate(screenWidth / 2 - screenWidth / 4, screenHeight / 2 + screenHeight / 4, 0);
+            this.Translate(screenWidth / 2 - rect.Width / 2, screenHeight / 2 + rect.Height / 2, 0);
 
             Invalidate();
 		} // end of RestoreInitialImage
@@ -544,11 +548,17 @@ namespace asgn5v1
 			}
 			if (e.Button == scaleupbtn) 
 			{
-				Refresh();
+                Translate(screenWidth/-2, screenHeight/-2, 0);
+                Scale(1.1,1.1,1);
+                Translate(screenWidth/2, screenHeight/2, 0);
+                Refresh();
 			}
 			if (e.Button == scaledownbtn) 
 			{
-				Refresh();
+                Translate(screenWidth / -2, screenHeight / -2, 0);
+                Scale(0.9,0.9,1);
+                Translate(screenWidth / 2, screenHeight / 2, 0);
+                Refresh();
 			}
 			if (e.Button == rotxby1btn) 
 			{
@@ -599,31 +609,54 @@ namespace asgn5v1
 
 		}
 
-        //get shape rect
-        Rectangle GetShapeRect()
+        //get shape rect 3D
+        Rectangle3D GetShapeRect()
         {
-            double left = this.vertices[0, 0], right = this.vertices[0, 0];
-            double top = this.vertices[0, 1], bottom = this.vertices[0, 1];
-            for(int i = 0; i < this.vertices.GetLength(0); i++)
+            // scrnpts = vertices*ctrans
+            double[,] pts = new double[vertices.GetLength(0), vertices.GetLength(1)];
+            double temp = 0.0d;
+            for (int i = 0; i < numpts; i++)
             {
-                if (this.vertices[i, 0] < left)
+                for (int j = 0; j < 4; j++)
                 {
-                    left = this.vertices[i, 0];
-                }
-                if(this.vertices[i, 0] > right)
-                {
-                    right = this.vertices[i, 0];
-                }
-                if (this.vertices[i, 1] < top)
-                {
-                    top = this.vertices[i, 1];
-                }
-                if (this.vertices[i, 1] > bottom)
-                {
-                    bottom = this.vertices[i, 1];
+                    temp = 0.0d;
+                    for (int k = 0; k < 4; k++)
+                        temp += vertices[i, k] * ctrans[k, j];
+                    pts[i, j] = temp;
                 }
             }
-            return new Rectangle(Convert.ToInt32(left), Convert.ToInt32(top), Convert.ToInt32(right - left), Convert.ToInt32(bottom - top));
+
+            double left = pts[0, 0], right = pts[0, 0];
+            double top = pts[0, 1], bottom = pts[0, 1];
+            double front = pts[0, 2], back = pts[0, 2];
+            for(int i = 0; i < this.vertices.GetLength(0); i++)
+            {
+                if (pts[i, 0] < left)
+                {
+                    left = pts[i, 0];
+                }
+                if(pts[i, 0] > right)
+                {
+                    right = pts[i, 0];
+                }
+                if (pts[i, 1] < top)
+                {
+                    top = pts[i, 1];
+                }
+                if (pts[i, 1] > bottom)
+                {
+                    bottom = pts[i, 1];
+                }
+                if (pts[i, 2] < back)
+                {
+                    back = pts[i, 1];
+                }
+                if (pts[i, 1] > front)
+                {
+                    front = pts[i, 1];
+                }
+            }
+            return new Rectangle3D(Convert.ToInt32(left), Convert.ToInt32(top), Convert.ToInt32(front), Convert.ToInt32(right - left), Convert.ToInt32(bottom - top), Convert.ToInt32(front - back));
         }
 
         //update the main transformation matrix by a given matrix object
@@ -667,6 +700,7 @@ namespace asgn5v1
             n.Set(0, 0, x);
             n.Set(1, 1, y);
             n.Set(2, 2, z);
+
             //multiply to add a scaling to the current transformation matrix
             this.mMatrix = this.mMatrix.Multiply(n);
             this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
@@ -696,12 +730,50 @@ namespace asgn5v1
 
         void Rotate(int axis, double angle_rad)
         {
+            MMatrix n = new MMatrix(4, 4);
+            n.SetIdentity();
+            switch (axis)
+            {
+                case 1:
 
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                default:
+                    break;
+            }
         }
 
         void Shear(int axis, double factor)
         {
 
+        }
+    }
+
+    public class Rectangle3D
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public int Z { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Depth { get; set; }
+
+        public Rectangle3D(int x, int y, int z, int width, int height, int depth)
+        {
+            this.X = x;
+            this.Y = y;
+            this.Z = z;
+            this.Width = width;
+            this.Height = height;
+            this.Depth = depth;
+        }
+
+        public Rectangle3D Clone()
+        {
+            return new Rectangle3D(X, Y, Z, Width, Height, Depth);
         }
     }
 
