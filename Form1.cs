@@ -14,6 +14,8 @@ namespace asgn5v1
 	/// </summary>
 	public class Transformer : System.Windows.Forms.Form
 	{
+        private const int AXIS_X = 1, AXIS_Y = 2, AXIS_Z = 3;
+        private const int TIMER_INTERVAL = 33;//ms
 		private System.ComponentModel.IContainer components;
 		//private bool GetNewData();
 
@@ -55,7 +57,11 @@ namespace asgn5v1
         MVectorArray vArray;
         double screenWidth;
         double screenHeight;
-        double depth;
+
+        Timer mTimer;
+        int continuous_axis = AXIS_X;
+        double continuous_angle = 0.0d;
+
 
 		public Transformer()
 		{
@@ -85,7 +91,12 @@ namespace asgn5v1
 			Menu = new MainMenu(new MenuItem[] {miFile, miAbout});
 
             this.mMatrix = new MMatrix(4, 4);
-		}
+
+            // Create a timer with a two second interval.
+            this.mTimer = new Timer();
+            this.mTimer.Interval = TIMER_INTERVAL;
+            this.mTimer.Tick += OnTimedEvent;
+        }
 
 		/// <summary>
 		/// Clean up any resources being used.
@@ -338,7 +349,7 @@ namespace asgn5v1
 		protected override void OnPaint(PaintEventArgs pea)
 		{
 			Graphics grfx = pea.Graphics;
-         Pen pen = new Pen(Color.White, 3);
+            Pen pen = new Pen(Color.White, 3);
 			double temp;
 			int k;
 
@@ -367,8 +378,9 @@ namespace asgn5v1
                 }
 
 
-            } // end of gooddata block	
-		} // end of OnPaint
+            } // end of gooddata block
+            //redraw for continuous effects
+        } // end of OnPaint
 
 		void MenuNewDataOnClick(object obj, EventArgs ea)
 		{
@@ -527,27 +539,42 @@ namespace asgn5v1
 		{
 			if (e.Button == transleftbtn)
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(-10, 0, 0);
                 Refresh();
 			}
 			if (e.Button == transrightbtn) 
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(10, 0, 0);
                 Refresh();
 			}
 			if (e.Button == transupbtn)
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(0, -10, 0);
                 Refresh();
 			}
 			
 			if(e.Button == transdownbtn)
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(0, 10, 0);
                 Refresh();
 			}
 			if (e.Button == scaleupbtn) 
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(screenWidth/-2, screenHeight/-2, 0);
                 Scale(1.1,1.1,1);
                 Translate(screenWidth/2, screenHeight/2, 0);
@@ -555,6 +582,9 @@ namespace asgn5v1
 			}
 			if (e.Button == scaledownbtn) 
 			{
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+
                 Translate(screenWidth / -2, screenHeight / -2, 0);
                 Scale(0.9,0.9,1);
                 Translate(screenWidth / 2, screenHeight / 2, 0);
@@ -562,39 +592,49 @@ namespace asgn5v1
 			}
 			if (e.Button == rotxby1btn) 
 			{
-				
-			}
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+            }
 			if (e.Button == rotyby1btn) 
 			{
-				
-			}
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+            }
 			if (e.Button == rotzby1btn) 
 			{
-				
-			}
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+            }
 
 			if (e.Button == rotxbtn) 
 			{
-				
-			}
+                this.ContRotate(AXIS_X, 0.05);
+                Refresh();
+            }
 			if (e.Button == rotybtn) 
 			{
-				
-			}
+                this.ContRotate(AXIS_Y, 0.05);
+                Refresh();
+            }
 			
 			if (e.Button == rotzbtn) 
 			{
-				
-			}
+                this.ContRotate(AXIS_Z, 0.05);
+                Refresh();
+            }
 
 			if(e.Button == shearleftbtn)
 			{
-				Refresh();
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+                Refresh();
 			}
 
 			if (e.Button == shearrightbtn) 
 			{
-				Refresh();
+                //stop continuous rotating effect
+                if(this.mTimer.Enabled) this.mTimer.Stop();
+                Refresh();
 			}
 
 			if (e.Button == resetbtn)
@@ -734,12 +774,12 @@ namespace asgn5v1
             n.SetIdentity();
             switch (axis)
             {
-                case 1:
+                case AXIS_X:
 
                     break;
-                case 2:
+                case AXIS_Y:
                     break;
-                case 3:
+                case AXIS_Z:
                     break;
                 default:
                     break;
@@ -748,7 +788,21 @@ namespace asgn5v1
 
         void Shear(int axis, double factor)
         {
+            
+        }
 
+        private void ContRotate(int axis, double angle_rad)
+        {
+            this.continuous_axis = axis;
+            this.continuous_angle = angle_rad;
+            this.mTimer.Start();
+        }
+        
+        private void OnTimedEvent(Object source, EventArgs e)
+        {
+            this.Translate(1, 0, 0);
+            this.Rotate(this.continuous_axis, this.continuous_angle);
+            Refresh();
         }
     }
 
