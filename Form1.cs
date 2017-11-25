@@ -76,7 +76,7 @@ namespace asgn5v1
 			this.SetStyle(ControlStyles.AllPaintingInWmPaint, true);
 			this.SetStyle(ControlStyles.UserPaint, true);
 			this.SetStyle(ControlStyles.DoubleBuffer, true);
-			Text = "COMP 4560:  Assignment 5 (200830) (Your Name Here)";
+			Text = "COMP 4560:  Assignment 5 (200830) (Teresa Guan and Penjie Liang)";
 			ResizeRedraw = true;
 			BackColor = Color.Black;
 			MenuItem miNewDat = new MenuItem("New &Data...",
