@@ -15,7 +15,8 @@ namespace asgn5v1
 	public class Transformer : System.Windows.Forms.Form
 	{
         private const int AXIS_X = 1, AXIS_Y = 2, AXIS_Z = 3;
-        private const int TIMER_INTERVAL = 33;//ms
+        private const int LEFT = 1, RIGHT = 2;
+        private const int TIMER_INTERVAL = 10;//ms
 		private System.ComponentModel.IContainer components;
 		//private bool GetNewData();
 
@@ -51,8 +52,7 @@ namespace asgn5v1
 		private System.Windows.Forms.ToolBarButton resetbtn;
 		private System.Windows.Forms.ToolBarButton exitbtn;
 		int[,] lines;
-        double shapeWidth = 0.0d;
-        double shapeHeight = 0.0d;
+        Rectangle3D oRect, nRect;
         MMatrix mMatrix;
         MVectorArray vArray;
         double screenWidth;
@@ -377,9 +377,9 @@ namespace asgn5v1
                         (int)scrnpts[lines[i, 1], 0], (int)scrnpts[lines[i, 1], 1]);
                 }
 
-
+            //update the nRect for the current shape
+            this.nRect = this.GetCShapeRect();
             } // end of gooddata block
-            //redraw for continuous effects
         } // end of OnPaint
 
 		void MenuNewDataOnClick(object obj, EventArgs ea)
@@ -409,9 +409,6 @@ namespace asgn5v1
             //"top-upwards" with center at the center of the screen, and vertical height 
             //equal to half the vertical height of the screen/window.
 
-            //
-
-            
             Screen screen = Screen.FromControl(this);
             this.screenWidth = screen.Bounds.Width;
             this.screenHeight = screen.Bounds.Height;
@@ -421,18 +418,22 @@ namespace asgn5v1
             this.mMatrix.SetIdentity();
 
             //scale to as large as half width of screen
-            Rectangle3D rect = this.GetShapeRect();//this is the original one
 
-            double scale_ratio = screenHeight / (2 * rect.Height);
-            this.Scale(scale_ratio, scale_ratio, 1);
+            //calculate the scale ratio
+            double scale_ratio = screenHeight / (2 * oRect.Height);
+            //translate the center point to the origin
+            Rectangle3D rect = this.GetCShapeRect();
+            this.Translate(0 - rect.X - rect.Width / 2, 0 - rect.Y - rect.Height / 2, 0 - rect.Z - rect.Depth / 2);
             //reflect on y axis to convert from screen coord system to general coord system
             this.Reflect(false, true, false);
             //scale to as large as half width of screen
-            rect = this.GetShapeRect();//this is the one after scaling
+            this.Scale(scale_ratio, scale_ratio, scale_ratio);
+            //calculate how much to translate to center
+            rect = this.GetCShapeRect();//this is the rect for the shape after transformation
             //translate to center
-            this.Translate(screenWidth / 2 - rect.Width / 2, screenHeight / 2 + rect.Height / 2, 0);
+            this.Translate((screenWidth) / 2, (screenHeight) / 2, 0);
 
-            Invalidate();
+            Refresh();
 		} // end of RestoreInitialImage
 
 		bool GetNewData()
@@ -482,7 +483,9 @@ namespace asgn5v1
 			}
 			scrnpts = new double[numpts,4];
 			setIdentity(ctrans,4,4);  //initialize transformation matrix to identity
-			return true;
+            //initial the variables that store the original shape
+            this.oRect = this.GetCShapeRect();
+            return true;
 		} // end of GetNewData
 
 		void DecodeCoords(ArrayList coorddata)
@@ -537,6 +540,7 @@ namespace asgn5v1
 
 		private void toolBar1_ButtonClick(object sender, System.Windows.Forms.ToolBarButtonClickEventArgs e)
 		{
+            Rectangle3D rect = this.GetCShapeRect();
 			if (e.Button == transleftbtn)
 			{
                 //stop continuous rotating effect
@@ -574,10 +578,11 @@ namespace asgn5v1
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
-
-                Translate(screenWidth/-2, screenHeight/-2, 0);
-                Scale(1.1,1.1,1);
-                Translate(screenWidth/2, screenHeight/2, 0);
+                //move center of shape to origin
+                Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.Z - rect.CenterZ);
+                Scale(1.1,1.1,1.1);
+                //move center of shape to screen
+                Translate(rect.CenterX, rect.CenterY, rect.Z - rect.CenterZ);
                 Refresh();
 			}
 			if (e.Button == scaledownbtn) 
@@ -585,41 +590,75 @@ namespace asgn5v1
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
 
-                Translate(screenWidth / -2, screenHeight / -2, 0);
-                Scale(0.9,0.9,1);
-                Translate(screenWidth / 2, screenHeight / 2, 0);
+                // move center of shape to origin
+                Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.Z - rect.CenterZ);
+                Scale(0.9,0.9,0.9);
+                // move center of shape back to previous position
+                Translate(rect.CenterX, rect.CenterY, rect.Z - rect.CenterZ);
                 Refresh();
 			}
 			if (e.Button == rotxby1btn) 
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
+
+                //move center of shape to origin
+                Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.CenterZ);
+                Rotate(AXIS_X, 0.05);
+                //move center of shape to previous coordinate
+                Translate(rect.CenterX, rect.CenterY, rect.CenterZ);
+                Refresh();
             }
 			if (e.Button == rotyby1btn) 
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
+
+                // Move shape to origin (0,0,0)
+                Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.CenterZ);
+
+                // Rotates shape
+                Rotate(AXIS_Y, 0.05);
+
+                // Move shape back to previous position
+                Translate(rect.CenterX, rect.CenterY, rect.CenterZ);
+                Refresh();
             }
 			if (e.Button == rotzby1btn) 
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
+                //move center of shape to origin
+                Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.Z - rect.CenterZ);
+                Rotate(AXIS_Z, 0.05);
+                //move conter of shape to previous position
+                Translate(rect.CenterX, rect.CenterY, rect.Z - rect.CenterZ);
+                Refresh();
             }
 
 			if (e.Button == rotxbtn) 
 			{
-                this.ContRotate(AXIS_X, 0.05);
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+                //start continuous rotating effect
+                else this.ContRotate(AXIS_X, 0.05);
                 Refresh();
             }
 			if (e.Button == rotybtn) 
 			{
-                this.ContRotate(AXIS_Y, 0.05);
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+                //start continuous rotating effect
+                else this.ContRotate(AXIS_Y, 0.05);
                 Refresh();
             }
 			
 			if (e.Button == rotzbtn) 
 			{
-                this.ContRotate(AXIS_Z, 0.05);
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+                //start continuous rotating effect
+                else this.ContRotate(AXIS_Z, 0.05);
                 Refresh();
             }
 
@@ -627,6 +666,12 @@ namespace asgn5v1
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
+                //move bottom edge of shape to y-axis
+                Translate(0, 0 - rect.CenterY - rect.Height/2, 0);
+                Shear(LEFT, 0.1);
+                // shape back to previous position
+                Translate(0, rect.CenterY + rect.Height / 2, 0);
+
                 Refresh();
 			}
 
@@ -634,12 +679,20 @@ namespace asgn5v1
 			{
                 //stop continuous rotating effect
                 if(this.mTimer.Enabled) this.mTimer.Stop();
+                //move bottom edge of shape to y-axis
+                Translate(0, 0 - rect.CenterY - rect.Height / 2, 0);
+                Shear(RIGHT, 0.1);
+                //move shape back to previous position
+                Translate(0, rect.CenterY + rect.Height / 2, 0);
+
                 Refresh();
 			}
 
 			if (e.Button == resetbtn)
 			{
-				RestoreInitialImage();
+                //stop continuous rotating effect
+                if (this.mTimer.Enabled) this.mTimer.Stop();
+                RestoreInitialImage();
 			}
 
 			if(e.Button == exitbtn) 
@@ -649,11 +702,11 @@ namespace asgn5v1
 
 		}
 
-        //get shape rect 3D
-        Rectangle3D GetShapeRect()
+        Rectangle3D GetCShapeRect()
         {
             // scrnpts = vertices*ctrans
-            double[,] pts = new double[vertices.GetLength(0), vertices.GetLength(1)];
+            //calculate the shape on the transformation
+            double[,] pts = new double[this.scrnpts.GetLength(0), this.scrnpts.GetLength(1)];
             double temp = 0.0d;
             for (int i = 0; i < numpts; i++)
             {
@@ -665,17 +718,17 @@ namespace asgn5v1
                     pts[i, j] = temp;
                 }
             }
-
             double left = pts[0, 0], right = pts[0, 0];
             double top = pts[0, 1], bottom = pts[0, 1];
             double front = pts[0, 2], back = pts[0, 2];
-            for(int i = 0; i < this.vertices.GetLength(0); i++)
+
+            for (int i = 0; i < pts.GetLength(0); i++)
             {
                 if (pts[i, 0] < left)
                 {
                     left = pts[i, 0];
                 }
-                if(pts[i, 0] > right)
+                if (pts[i, 0] > right)
                 {
                     right = pts[i, 0];
                 }
@@ -689,11 +742,11 @@ namespace asgn5v1
                 }
                 if (pts[i, 2] < back)
                 {
-                    back = pts[i, 1];
+                    back = pts[i, 2];
                 }
-                if (pts[i, 1] > front)
+                if (pts[i, 2] > front)
                 {
-                    front = pts[i, 1];
+                    front = pts[i, 2];
                 }
             }
             return new Rectangle3D(Convert.ToInt32(left), Convert.ToInt32(top), Convert.ToInt32(front), Convert.ToInt32(right - left), Convert.ToInt32(bottom - top), Convert.ToInt32(front - back));
@@ -775,20 +828,48 @@ namespace asgn5v1
             switch (axis)
             {
                 case AXIS_X:
-
+                    n.Set(1, 1, Math.Cos(angle_rad));
+                    n.Set(1, 2, -Math.Sin(angle_rad));
+                    n.Set(2, 1, Math.Sin(angle_rad));
+                    n.Set(2, 2, Math.Cos(angle_rad));
                     break;
                 case AXIS_Y:
+                    n.Set(0, 0, Math.Cos(angle_rad));
+                    n.Set(0, 2, -Math.Sin(angle_rad));
+                    n.Set(2, 0, Math.Sin(angle_rad));
+                    n.Set(2, 2, Math.Cos(angle_rad));
                     break;
                 case AXIS_Z:
+                    n.Set(0, 0, Math.Cos(angle_rad));
+                    n.Set(0, 1, -Math.Sin(angle_rad));
+                    n.Set(1, 0, Math.Sin(angle_rad));
+                    n.Set(1, 1, Math.Cos(angle_rad));
                     break;
                 default:
                     break;
             }
+            //multiply to add a reflection to the current transformation matrix
+            this.mMatrix = this.mMatrix.Multiply(n);
+            this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
         }
 
-        void Shear(int axis, double factor)
+        void Shear(int side, double factor)
         {
-            
+            MMatrix n = new MMatrix(4, 4);
+            n.SetIdentity();
+            if (side == LEFT)
+            {
+                n.Set(1, 0, factor);
+            }
+
+            if (side == RIGHT)
+            {
+                n.Set(1, 0, -factor);
+            }
+
+            //multiply to add a reflection to the current transformation matrix
+            this.mMatrix = this.mMatrix.Multiply(n);
+            this.updateTrans(this.mMatrix);//update ctrans to match the new transformation
         }
 
         private void ContRotate(int axis, double angle_rad)
@@ -800,8 +881,17 @@ namespace asgn5v1
         
         private void OnTimedEvent(Object source, EventArgs e)
         {
-            this.Translate(1, 0, 0);
+            //this is the rect for current shape
+            Rectangle3D rect = this.GetCShapeRect();
+            //translate the center point of the shape to origin
+            Translate(0 - rect.CenterX, 0 - rect.CenterY, 0 - rect.Z - rect.CenterZ);
+
+            //rotate
             this.Rotate(this.continuous_axis, this.continuous_angle);
+            
+            //translate the center point back to its last centr point
+            this.Translate(rect.CenterX, rect.CenterY, rect.CenterZ);
+
             Refresh();
         }
     }
@@ -814,6 +904,26 @@ namespace asgn5v1
         public int Width { get; set; }
         public int Height { get; set; }
         public int Depth { get; set; }
+        public int CenterX
+        {
+            get {
+                return X + Width / 2;
+            }
+        }
+        public int CenterY
+        {
+            get
+            {
+                return Y + Height / 2;
+            }
+        }
+        public int CenterZ
+        {
+            get
+            {
+                return Z - Depth / 2;
+            }
+        }
 
         public Rectangle3D(int x, int y, int z, int width, int height, int depth)
         {
@@ -829,6 +939,7 @@ namespace asgn5v1
         {
             return new Rectangle3D(X, Y, Z, Width, Height, Depth);
         }
+
     }
 
 	public class MMatrix
