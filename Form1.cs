@@ -666,7 +666,7 @@ namespace asgn5v1
 			{
                 //stop continuous rotating effect
                 if (this.mTimer.Enabled) this.mTimer.Stop();
-                //move bottom edge of shape to y-axis
+                //move bottom edge of shape to x-axis
                 Translate(0, 0 - rect.CenterY - rect.Height/2, 0);
                 Shear(LEFT, 0.1);
                 // shape back to previous position
@@ -679,7 +679,7 @@ namespace asgn5v1
 			{
                 //stop continuous rotating effect
                 if(this.mTimer.Enabled) this.mTimer.Stop();
-                //move bottom edge of shape to y-axis
+                //move bottom edge of shape to x-axis
                 Translate(0, 0 - rect.CenterY - rect.Height / 2, 0);
                 Shear(RIGHT, 0.1);
                 //move shape back to previous position
